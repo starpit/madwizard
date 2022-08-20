@@ -30,10 +30,7 @@ export default function addCondaDependences(
       memos.dependencies.conda = []
     }
 
-    cmdline
-      .split(/\n/)
-      .filter(Boolean)
-      .forEach((_) => memos.dependencies.conda.push(_))
+    memos.dependencies.conda = [cmdline]
     return "success" as const
   }
 }

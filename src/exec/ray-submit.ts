@@ -27,11 +27,14 @@ import { copyChoices } from "../profiles/index.js"
 
 type ParsedOptions = ReturnType<typeof import("yargs-parser")>
 
+interface CondaEnvironment {
+  channels?: string[]
+  dependencies: (string | { pip: string[] })[]
+}
+
 interface RuntimeEnvDependencies {
   pip?: string[]
-  conda?: {
-    dependencies: (string | { pip: string[] })[]
-  }
+  conda?: CondaEnvironment
 }
 
 /** Expand env vars */
@@ -93,7 +96,12 @@ async function dependencies(memos: Memos, parsedOptions: ParsedOptions): Promise
   await addPipsFromTemplate(pips, parsedOptions, memos)
   pips.delete("ray")
 
-  const condas = new Set(!memos.dependencies || !memos.dependencies.conda ? [] : memos.dependencies.conda)
+  const condaEnv =
+    memos.dependencies && memos.dependencies.conda
+      ? ((await import("js-yaml").then((_) => _.load(memos.dependencies.conda[0]))) as CondaEnvironment)
+      : ({} as CondaEnvironment)
+  const channels = (condaEnv && condaEnv.channels) || []
+  const condas = new Set((condaEnv && condaEnv.dependencies) || [])
 
   if (condas.size === 0 && pips.size === 0) {
     return {}
@@ -112,9 +120,8 @@ async function dependencies(memos: Memos, parsedOptions: ParsedOptions): Promise
       })
     }
 
-    return {
-      conda: { dependencies },
-    }
+    const conda: CondaEnvironment = { channels, dependencies }
+    return { conda }
   }
 }
 
