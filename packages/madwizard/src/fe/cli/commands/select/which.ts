@@ -20,13 +20,13 @@ import type Opts from "../../options.js"
 import { inputBuilder as builder, InputOpts } from "../input.js"
 import type { MadWizardOptions } from "../../../MadWizardOptions.js"
 
-export default function getModule(
+export default function whichModule(
   resolve: (value?: unknown) => void,
   reject: (err: Error) => void,
   providedOptions: MadWizardOptions
 ): CommandModule<Opts, InputOpts> {
   return {
-    command: "get <input>",
+    command: "which <input>",
     describe: "Determine the installed path of the given binary, installing if needed",
     builder,
     handler: async (argv: Arguments<InputOpts>) => {

@@ -16,6 +16,10 @@
 
 import type { MadWizardOptions } from "../../../MadWizardOptions.js"
 
+function rewriteToMapToMadWizardIntrinsics(source: string): string {
+  return source.replace(/\$\((cat|which) \/(.+)\)/g, "$(mw_$1 /$2)")
+}
+
 export default async function readMarkdown(filepath: string, madwizardOptions: MadWizardOptions) {
   const [{ madwizardRead }, { fetcherFor }, inlineSnippets] = await Promise.all([
     import("../../madwizardRead.js"),
@@ -23,6 +27,9 @@ export default async function readMarkdown(filepath: string, madwizardOptions: M
     import("../../../../parser/markdown/snippets/index.js").then((_) => _.default),
   ])
   const fetcher = fetcherFor(madwizardRead, madwizardOptions.store, true)
-  const sourcePriorToInlining = await fetcher(filepath).catch(() => fetcher(filepath.replace(/^\//, "")))
+  const sourcePriorToInlining = await fetcher(filepath)
+    .catch(() => fetcher(filepath.replace(/^\//, "")))
+    .then(rewriteToMapToMadWizardIntrinsics)
+
   return inlineSnippets({ fetcher, madwizardOptions })(sourcePriorToInlining, filepath)
 }

@@ -69,8 +69,13 @@ export default function selectModule(
 
           resolve()
         } catch (err) {
-          console.error(err)
-          reject(err)
+          // sigh, this is enquirer's bizarre way of indicating the prompt was cancelled
+          if (!err.message) {
+            process.exit(130)
+          } else {
+            console.error(err)
+            reject(err)
+          }
         } finally {
           await profileManager.cleanup()
         }
