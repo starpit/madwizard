@@ -32,7 +32,7 @@ export default async function planHandler<Writer extends Writable["write"]>(
   const choices = loadAssertions(
     newChoiceState(argv.profile === false ? "ignore" : argv.profile),
     providedOptions,
-    argv
+    argv.assert
   )
 
   // re: | "-", see https://github.com/yargs/yargs/issues/1312

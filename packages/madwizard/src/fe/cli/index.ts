@@ -30,6 +30,10 @@ import mirror from "./commands/mirror.js"
 import profile from "./commands/profile/index.js"
 import guideMod, { GuideRet } from "./commands/guide/index.js"
 
+import get from "./commands/select/get.js"
+import oneof from "./commands/select/oneof.js"
+import severalof from "./commands/select/severalof.js"
+
 import { MadWizardOptionsWithInput } from "../MadWizardOptions.js"
 
 import strings from "./strings.js"
@@ -120,6 +124,11 @@ export async function cli<Writer extends Writable["write"]>(
       .command(guideMod("guide", resolve, reject2, providedOptions, write, ui))
       .command(profile(providedOptions))
       // .command(build(resolve, reject2, providedOptions))
+
+      .command(get(resolve, reject2, providedOptions))
+      .command(oneof(resolve, reject2, providedOptions))
+      .command(severalof(resolve, reject2, providedOptions))
+
       .command(plan(resolve, reject2, providedOptions, write))
       .command(mirror(resolve, reject2, providedOptions))
       .command(json(resolve, reject2, providedOptions, write))

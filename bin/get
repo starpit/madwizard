@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+SCRIPTDIR=$(cd $(dirname "$0") && pwd)
+
+if [ -f "$SCRIPTDIR"/madwizard ]; then
+   export PATH="$SCRIPTDIR":$PATH
+   "$SCRIPTDIR"/madwizard get $@
+else
+   madwizard get $@
+fi

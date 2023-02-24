@@ -22,22 +22,26 @@ import { Arguments } from "yargs"
 import { UI } from "../../../tree/index.js"
 import { MadWizardOptionsWithInput } from "../../../MadWizardOptions.js"
 
-import { getBlocksModel, loadAssertions, loadSuggestions, makeMemos } from "../util.js"
+import { getBlocksModel, makeMemos } from "../util.js"
 
 import GuideOpts, { assembleOptionsForGuide } from "./options.js"
 
 export type GuideRet = {
+  title?: string
+  description?: string
   cleanExit: (signal?: "SIGINT" | "SIGTERM") => void
   env: typeof process.env
 }
 
+type GuideTask = "run" | "guide"
+
 export default async function guideHandler<Writer extends Writable["write"]>(
-  task: "run" | "guide",
+  task: GuideTask,
   providedOptions: MadWizardOptionsWithInput,
   argv: Arguments<GuideOpts>,
   write?: Writer,
   ui?: UI<string>
-) {
+): Promise<GuideRet> {
   const { input } = argv
   const noProfile = argv.profile === false
 
@@ -46,59 +50,29 @@ export default async function guideHandler<Writer extends Writable["write"]>(
     process.env.QUIET_CONSOLE = "true"
   }
 
-  const newChoiceState = await import("../../../../choices/index.js").then((_) => _.newChoiceState)
-
-  // restore choices from profile
-  const profile = options.profile
-  const suggestions = await loadSuggestions(argv, options)
-
-  // if we are doing a run, then use the suggestions as the final
-  // choices; otherwise, treat them just as suggestions in the guide
-  const choices = loadAssertions(task === "run" ? suggestions : newChoiceState(profile), providedOptions, argv)
-
-  // A handler to serialize choices. We will call this after every
-  // choice. At exit, make sure to wait for the last persist to finish.
-  let lastPersist: ReturnType<typeof setTimeout>
-  let lastPersistPromise: Promise<void>
-  const persistChoices = () =>
-    import("../../../../profiles/persist.js").then((_) => _.default(options, choices, suggestions))
-  if (!noProfile && !process.env.QUIET_CONSOLE) {
-    choices.onChoice(() => {
-      // persist choices after every choice is made, and remember the
-      // async, so we can wait for it on exit
-      if (lastPersist) {
-        clearTimeout(lastPersist)
-      }
-
-      lastPersist = setTimeout(() => {
-        lastPersist = undefined
-        lastPersistPromise = persistChoices().then(() => {
-          lastPersistPromise = undefined
-        })
-      }, 50)
-    })
-  }
+  const ProfileManager = await import("../ProfileManager.js").then((_) => _.default)
+  const profileManager = await new ProfileManager(options).init(argv.assert, { isGuided: task !== "run", noProfile })
 
   // bump the `lastUsedTime` attribute
   if (!process.env.QUIET_CONSOLE && !noProfile && options.bump !== false) {
-    choices.profile.lastUsedTime = Date.now()
-    persistChoices()
+    profileManager.choices.profile.lastUsedTime = Date.now()
+    profileManager.persistChoices()
   }
 
   // this is the block model we parse from the source
   // re: | "-", see https://github.com/yargs/yargs/issues/1312
-  const blocks = await getBlocksModel(input || "-", choices, options)
+  const blocks = await getBlocksModel(input || "-", profileManager.choices, options)
 
   // a name we might want to associate with the run, in the logs
   const name = options.name ? ` (${options.name})` : ""
 
   const exitMessage = "⚠️  " + chalk.yellow(`Exiting${name} now, please wait for us to gracefully clean things up`)
   const [memoizer, Guide] = await Promise.all([
-    makeMemos(suggestions, argv),
+    makeMemos(profileManager.suggestions, argv),
     import("../../../guide/index.js").then((_) => _.Guide),
   ])
 
-  const guide = new Guide(task, blocks, choices, options, memoizer, ui, write)
+  const guide = new Guide(task, blocks, profileManager.choices, options, memoizer, ui, write)
 
   /** Kill any spawned subprocesses */
   let cleanExitPromise: Promise<void> | null = null
@@ -109,7 +83,7 @@ export default async function guideHandler<Writer extends Writable["write"]>(
         Debug("madwizard/cleanup")("memoizer.currentlyNeedsCleanup", memoizer.currentlyNeedsCleanup())
         Debug("madwizard/cleanup")("guide.currentlyNeedsCleanup", guide.currentlyNeedsCleanup())
         if (memoizer.currentlyNeedsCleanup() || guide.currentlyNeedsCleanup()) {
-          console.error(exitMessage)
+          console.log(exitMessage)
 
           try {
             Debug("madwizard/cleanup")("attempting a clean exit", signal)
@@ -141,23 +115,15 @@ export default async function guideHandler<Writer extends Writable["write"]>(
     providedOptions.onBeforeRun({ cleanExit })
   }
 
+  let resp: Awaited<ReturnType<import("../../../guide/index.js").Guide["run"]>>
   try {
-    await guide.run()
+    resp = await guide.run()
   } finally {
     //    if (options.verbose && task !== "run") {
     //      console.error(exitMessage)
     //    }
     if (!noProfile) {
-      if (lastPersistPromise) {
-        // wait for the last choice persistence operation to
-        // complete before we exit
-        await lastPersistPromise
-      } else if (lastPersist) {
-        // then we have a scheduled async; cancel that and save
-        // immediately
-        clearTimeout(lastPersist)
-        await persistChoices()
-      }
+      await profileManager.cleanup()
     }
 
     if (options.clean !== false) {
@@ -170,8 +136,8 @@ export default async function guideHandler<Writer extends Writable["write"]>(
     process.off("SIGTERM", cleanExitFromSIGTERM) // catch kill
   }
 
-  return {
+  return Object.assign(resp || {}, {
     cleanExit,
     env: memoizer.env,
-  }
+  })
 }

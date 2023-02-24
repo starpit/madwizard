@@ -69,7 +69,10 @@ export default async function shellItOut(
     },
     process.env,
     memos.env || {},
-    extraEnv
+    extraEnv,
+    {
+      GUIDEBOOK_STORE: opts.store,
+    }
   )
 
   if (memos.cliDashDash) {

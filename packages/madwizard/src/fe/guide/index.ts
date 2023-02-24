@@ -452,7 +452,7 @@ export class Guide {
         : (dryRun ? this.chalk.yellow(mainSymbols.questionMarkPrefix) : this.chalk.green(mainSymbols.play)) +
           " " +
           step.name,
-      quiet: subtasks.every((_) => this.beQuietForTaskRunner(_)),
+      quiet: this.options.verbose === false || subtasks.every((_) => this.beQuietForTaskRunner(_)),
       task: () =>
         subtasks.map(
           (block): Task => ({
@@ -505,6 +505,7 @@ export class Guide {
                           {
                             write: this.write,
                             shell: this.options.shell,
+                            store: this.options.store,
                             dryRun: this.options.dryRun,
                             verbose: this.options.verbose,
                             profile: this.options.profile,
@@ -611,7 +612,7 @@ export class Guide {
         ]),
       {
         /* options */
-        quiet: !this.isGuided,
+        quiet: !this.isGuided || this.options.verbose === false,
         concurrent: dryRun,
       },
       this.write || (await this.echoWrite())
@@ -644,22 +645,25 @@ export class Guide {
   }
 
   /** Emit the title and description of the given `graph` */
+  private title = ""
+  private description = ""
   private presentGuidebookTitle(graph: Graph) {
+    this.title = extractTitle(graph)
+    this.description = extractDescription(graph)
+
     if (isRaw(this.options)) {
       // do not display guidebook title if we are in "raw" mode
       return
     }
 
-    const title = extractTitle(graph)
-    const description = extractDescription(graph)
-    if (title) {
-      this.consoleLog(this.chalk.inverse.bold(` ${title.trim()} `))
+    if (this.title) {
+      this.consoleLog(this.chalk.inverse.bold(` ${this.title.trim()} `))
     }
-    if (description) {
-      this.consoleLog(this.format(description))
+    if (this.description) {
+      this.consoleLog(this.format(this.description))
     }
 
-    if (title || description) {
+    if (this.title || this.description) {
       this.consoleLog()
     }
   }
@@ -763,14 +767,18 @@ export class Guide {
           await alldone(this.options, this.allDoneSuccessfully())
         }
 
-        if (this.allDoneSuccessfully()) {
-          this.consoleLog()
-          this.consoleLog("✨ Guidebook successful" + name)
-        } else {
-          this.consoleLog()
-          this.consoleLog(this.chalk.red("Guidebook incomplete" + name))
+        if (this.options.verbose !== false) {
+          if (this.allDoneSuccessfully()) {
+            this.consoleLog()
+            this.consoleLog("✨ Guidebook successful" + name)
+          } else {
+            this.consoleLog()
+            this.consoleLog(this.chalk.red("Guidebook incomplete" + name))
+          }
         }
       }
+
+      return { title: this.title, description: this.description }
     } catch (err) {
       if (typeof err === "string" && err.length === 0) {
         // sigh, this is enquirer's bizarre way of indicating the prompt was cancelled

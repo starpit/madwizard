@@ -32,8 +32,8 @@ export async function makeMemos(suggestions: ChoiceState, argv: Arguments<Opts>)
   return memos
 }
 
-export async function loadSuggestions(argv: Pick<Opts, "profile">, options: MadWizardOptions): Promise<ChoiceState> {
-  return argv.profile === false
+export async function loadSuggestions(profile: string | boolean, options: MadWizardOptions): Promise<ChoiceState> {
+  return profile === false
     ? import("../../../choices/index.js").then((_) => _.newChoiceState("ignore"))
     : import("../../../profiles/restore.js").then((_) => _.default(options, options.profile))
 }
@@ -41,7 +41,7 @@ export async function loadSuggestions(argv: Pick<Opts, "profile">, options: MadW
 export function loadAssertions(
   choices: ChoiceState,
   providedOptions: MadWizardOptions,
-  argv: Arguments<Opts>
+  assert: Arguments<Opts>["assert"]
 ): ChoiceState {
   // assert a choice to have a given value, from programmatic options
   if (providedOptions && typeof providedOptions.assertions === "object") {
@@ -51,8 +51,8 @@ export function loadAssertions(
   }
 
   // assert a choice to have a given value, from command line
-  if (argv.assert) {
-    const assertions = Array.isArray(argv.assert) ? argv.assert : [argv.assert]
+  if (assert) {
+    const assertions = Array.isArray(assert) ? assert : [assert]
     assertions
       .map((_) => _.split(/=/))
       .forEach(([key, value]) => {

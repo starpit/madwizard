@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { Arguments, ParserConfigurationOptions } from "yargs"
+import type { Arguments, ParserConfigurationOptions } from "yargs"
 
 import defaultOptions from "./defaults.js"
-import { MadWizardOptions } from "../MadWizardOptions.js"
+import type { MadWizardOptions } from "../MadWizardOptions.js"
 
 export type Opts = {
   /** Name for the set of stored answers to questions */

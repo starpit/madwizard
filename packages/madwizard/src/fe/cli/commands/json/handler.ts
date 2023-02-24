@@ -36,8 +36,8 @@ export default async function jsonHandler<Writer extends Writable["write"]>(
   ])
 
   const options = assembleOptions(providedOptions, argv)
-  const suggestions = await loadSuggestions(argv, options)
-  const choices = loadAssertions(newChoiceState(options.profile), providedOptions, argv)
+  const suggestions = await loadSuggestions(argv.profile, options)
+  const choices = loadAssertions(newChoiceState(options.profile), providedOptions, argv.assert)
   const memos = await makeMemos(suggestions, argv)
   const blocks = await getBlocksModel(argv.input, choices, options)
   const graph = await compile(blocks, choices, memos, options)

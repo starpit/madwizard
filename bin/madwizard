@@ -1,6 +1,6 @@
 TOP=$(cd $(dirname "$0")/.. && pwd)
 
 DIST="$TOP"/packages/madwizard-cli-core/dist
-export GUIDEBOOK_STORE="$TOP"/node_modules/@guidebooks/store/dist/store
+export GUIDEBOOK_STORE=${GUIDEBOOK_STORE-"$TOP"/node_modules/@guidebooks/store/dist/store}
 
 exec node "$DIST"/madwizard.min.cjs "$@"
