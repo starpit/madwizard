@@ -31,14 +31,22 @@ export default function whichModule(
     builder,
     handler: async (argv: Arguments<InputOpts>) => {
       try {
-        const [{ VFile }, { default: exec }, { default: readMarkdown }, { default: opts }] = await Promise.all([
-          import("vfile"),
-          import("./exec.js"),
-          import("./read.js"),
-          import("./options.js"),
-        ])
+        const [{ VFile }, { isAbsolute, join }, { default: exec }, { default: readMarkdown }, { default: opts }] =
+          await Promise.all([
+            import("vfile"),
+            import("path"),
+            import("./exec.js"),
+            import("./read.js"),
+            import("./options.js"),
+          ])
 
-        const path = argv.input
+        // e.g. `which kubectl` -> `which /usr/local/bin/kubectl/darwin/x64`
+        const path = join(
+          isAbsolute(argv.input) ? argv.input : join("/usr/local/bin", argv.input),
+          process.platform,
+          process.arch
+        )
+
         const options = await opts(providedOptions, argv)
         const value = await readMarkdown(path, options)
 
