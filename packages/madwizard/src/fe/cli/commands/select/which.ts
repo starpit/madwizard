@@ -43,6 +43,7 @@ export default function whichModule(
         // e.g. `which kubectl` -> `which /usr/local/bin/kubectl/darwin/x64`
         const path = join(
           isAbsolute(argv.input) ? argv.input : join("/usr/local/bin", argv.input),
+          ".which",
           process.platform,
           process.arch
         )
