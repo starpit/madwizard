@@ -130,7 +130,7 @@ export default async function shellItOut(
         if (code === 90 || code === 130) {
           // 90 is a guidebook saying to exit early
           // 130 is SIGINT
-          reject(EarlyExit())
+          reject(EarlyExit(code))
         } else if (code === 0) {
           resolve("success")
         } else {

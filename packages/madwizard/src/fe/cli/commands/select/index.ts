@@ -22,6 +22,7 @@ import type Opts from "../../options.js"
 import { UI, AnsiUI } from "../../../tree/index.js"
 import type { MadWizardOptions } from "../../../MadWizardOptions.js"
 import { inputBuilder as builder, InputOpts } from "../input.js"
+import { isEarlyExit } from "../../../../exec/EarlyExit.js"
 
 import opts from "./options.js"
 
@@ -70,10 +71,9 @@ export default function selectModule(
           resolve()
         } catch (err) {
           // sigh, this is enquirer's bizarre way of indicating the prompt was cancelled
-          if (!err.message) {
+          if (!err.message || (isEarlyExit(err) && err.code === 130)) {
             process.exit(130)
           } else {
-            console.error(err)
             reject(err)
           }
         } finally {

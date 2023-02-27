@@ -93,7 +93,7 @@ export class Guide {
   ) {}
 
   public currentlyNeedsCleanup(): boolean {
-    return !!this._currentRunner || this.numOnStackFinallies > 0
+    return (!!this._currentRunner && this._currentRunner.isRunning) || this.numOnStackFinallies > 0
   }
 
   private exitSignalFromUser?: Parameters<Memos["cleanup"]>[0]
@@ -785,7 +785,7 @@ export class Guide {
         process.emit("SIGINT")
         throw err
       } else if (isEarlyExit(err)) {
-        throw new Error("Canceled by user")
+        throw err
       } else if (!this.hasReceivedExitSignalFromUser) {
         if (this.options.raw) {
           throw err

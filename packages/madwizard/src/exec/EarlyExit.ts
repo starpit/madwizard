@@ -14,15 +14,21 @@
  * limitations under the License.
  */
 
+class EarlyExitError extends Error {
+  public constructor(public readonly code: number) {
+    super("Operation canceled")
+  }
+}
+
 /**
  * An Error used to designate that a guidebook wants to stop now, but
  * with a normal exit code.
  */
-export default function EarlyExit() {
-  return new Error("EarlyExit")
+export default function EarlyExit(code: number) {
+  return new EarlyExitError(code)
 }
 
 /** @return whether the given `err` indicates an EarlyExit situation */
-export function isEarlyExit(err: Error) {
-  return err.message === "EarlyExit"
+export function isEarlyExit(err: Error): err is EarlyExitError {
+  return err.message === "Operation canceled"
 }

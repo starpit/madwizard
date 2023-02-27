@@ -105,41 +105,51 @@ export default class TaskRunner {
     this._isKilled = true
   }
 
+  public get isRunning() {
+    return !this._isKilled
+  }
+
   public async run(
     tasks: Task[],
     options: TaskRunnerOptions = {},
     write: Writable["write"] = process.stdout.write.bind(process.stdout),
     depth = 0
   ) {
-    await promiseEach(tasks, async ({ title, task, spinner, quiet }, idx) => {
-      if (this._isKilled) {
-        return
-      }
-
-      if (idx > 0 && !options.quiet && !quiet) {
-        // write(EOL)
-      }
-
-      if (!spinner && title && !quiet) {
-        write(title)
-      }
-
-      if (Array.isArray(task)) {
-        // subtasks
-        if (!options.quiet && !quiet) {
-          write(EOL)
+    try {
+      await promiseEach(tasks, async ({ title, task, spinner, quiet }, idx) => {
+        if (this._isKilled) {
+          return
         }
-        await this.run(task, options, write, depth + 1)
-      } else {
-        const wrapper = new TaskWrapperImpl(title, write, quiet, !quiet && spinner ? ora(title).start() : undefined)
-        const response = await task(wrapper)
-        if (Array.isArray(response)) {
+
+        if (idx > 0 && !options.quiet && !quiet) {
+          // write(EOL)
+        }
+
+        if (!spinner && title && !quiet) {
+          write(title)
+        }
+
+        if (Array.isArray(task)) {
+          // subtasks
           if (!options.quiet && !quiet) {
             write(EOL)
           }
-          await this.run(response, options, write, depth + 1)
+          await this.run(task, options, write, depth + 1)
+        } else {
+          const wrapper = new TaskWrapperImpl(title, write, quiet, !quiet && spinner ? ora(title).start() : undefined)
+          const response = await task(wrapper)
+          if (Array.isArray(response)) {
+            if (!options.quiet && !quiet) {
+              write(EOL)
+            }
+            await this.run(response, options, write, depth + 1)
+          }
         }
+      })
+    } finally {
+      if (depth === 0) {
+        this._isKilled = true
       }
-    })
+    }
   }
 }
